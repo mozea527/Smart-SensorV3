@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Sensor for Lettuce</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- Icons & Fonts -->
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <style>
+    body {
+      background-color: #121212;
+      color: #ffffff;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #1e1e1e;
+      padding: 1rem;
+      text-align: center;
+    }
+    h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      padding: 1rem;
+    }
+    .card {
+      background: #1e1e1e;
+      padding: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #333;
+      text-align: center;
+    }
+    .card i {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      color: #4fc3f7;
+    }
+    .alert {
+      color: #ff5252;
+      font-weight: bold;
+    }
+    #tips {
+      margin: 2rem;
+      padding: 1rem;
+      background-color: #263238;
+      border-left: 4px solid #4fc3f7;
+      border-radius: 5px;
+    }
+    .settings {
+      margin: 1rem;
+      text-align: center;
+    }
+    button {
+      background: #4fc3f7;
+      border: none;
+      padding: 0.5rem 1rem;
+      color: #000;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>?? Smart Sensor for Lettuce</h1>
+  </header>
+
+  <div class="settings">
+    <button onclick="toggleSound()">?? Toggle Sound</button>
+    <button onclick="toggleVibration()">?? Toggle Vibration</button>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <i class="fas fa-tint"></i>
+      <p>Soil Moisture: <span id="moisture">Loading...</span>%</p>
+    </div>
+    <div class="card">
+      <i class="fas fa-thermometer-half"></i>
+      <p>Soil Temperature: <span id="soilTemp">Loading...</span>°C</p>
+    </div>
+    <div class="card">
+      <i class="fas fa-water"></i>
+      <p>Humidity: <span id="humidity">Loading...</span>%</p>
+    </div>
+    <div class="card">
+      <i class="fas fa-vial"></i>
+      <p>pH Level: <span id="ph">Loading...</span></p>
+    </div>
+    <div class="card">
+      <i class="fas fa-sun"></i>
+      <p>Light Intensity: <span id="light">Loading...</span> lux</p>
+    </div>
+  </div>
+
+  <div id="tips" style="display:none;"></div>
+
+  <!-- Audio Alert -->
+  <audio id="alertSound" src="https://www.soundjay.com/buttons/sounds/beep-07.mp3"></audio>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC5kHMBuFIfa0Ph7daiSeUEDIBZDeQn_U8",
+      authDomain: "smartsensorforlettuce.firebaseapp.com",
+      databaseURL: "https://smartsensorforlettuce-default-rtdb.firebaseio.com",
+      projectId: "smartsensorforlettuce",
+      storageBucket: "smartsensorforlettuce.appspot.com",
+      messagingSenderId: "233693585928",
+      appId: "1:233693585928:web:b76e1c515ab342b1bd27bd"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const dbRef = firebase.database().ref("sensorData/latest");
+
+    let soundEnabled = true;
+    let vibrationEnabled = true;
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      alert("Sound is now " + (soundEnabled ? "ON" : "OFF"));
+    }
+
+    function toggleVibration() {
+      vibrationEnabled = !vibrationEnabled;
+      alert("Vibration is now " + (vibrationEnabled ? "ON" : "OFF"));
+    }
+
+    dbRef.on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      document.getElementById("moisture").innerText = data.moisture;
+      document.getElementById("soilTemp").innerText = data.soilTemperature;
+      document.getElementById("humidity").innerText = data.humidity;
+      document.getElementById("ph").innerText = data.pH;
+      document.getElementById("light").innerText = data.light;
+
+      const tipsBox = document.getElementById("tips");
+      let alertMessage = "";
+
+      if (data.moisture < 30 || data.moisture > 80) {
+        alertMessage += "<p class='alert'>?? Moisture level is critical! Water appropriately.</p>";
+      }
+      if (data.soilTemperature < 10 || data.soilTemperature > 30) {
+        alertMessage += "<p class='alert'>?? Soil temp not ideal! Lettuce grows best at 15–25°C.</p>";
+      }
+      if (data.humidity < 40 || data.humidity > 80) {
+        alertMessage += "<p class='alert'>?? Humidity not optimal! Maintain air moisture between 50–70%.</p>";
+      }
+      if (data.pH < 5.5 || data.pH > 7.0) {
+        alertMessage += "<p class='alert'>?? pH imbalance! Lettuce prefers pH 6.0–6.8.</p>";
+      }
+      if (data.light < 100 || data.light > 1500) {
+        alertMessage += "<p class='alert'>?? Light too low/high! Lettuce prefers 300–1200 lux.</p>";
+      }
+
+      if (alertMessage !== "") {
+        tipsBox.style.display = "block";
+        tipsBox.innerHTML = "<h3>?? Plant Care Tips for Lettuce:</h3>" + alertMessage;
+        if (soundEnabled) document.getElementById("alertSound").play();
+        if (vibrationEnabled && navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      } else {
+        tipsBox.style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>
